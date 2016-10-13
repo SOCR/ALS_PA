@@ -1,7 +1,7 @@
 ---
 title: "ALS project"
-author: "SOCR Team (Ming Tang, Chao Gao, Ivo Dinov)"
-date: "September 19, 2016"
+author: "Ming Tang, Chao Gao, Ivo Dinov"
+date: "October 14, 2016"
 output: html_document
 ---
 
@@ -12,7 +12,7 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ### set directory######
 ```{r}
-setwd("/Users/gchao/Desktop/ALS")
+setwd("/User/project/ALS")
 ```
 
 ### Request more heap memory ###
@@ -328,7 +328,7 @@ write.csv(describe(data2), "Data/Descriptive_testing_Ncomplete.csv")
 ```
 
 
-####deal with missing values in PRO-ACT testing data first (78 obs. of 99 variables) #####
+####deal with missing values in PRO-ACT testing data first (78 obs. of 100 variables) #####
 ```{r}
 data2<-data2[,order(colnames(data2))]
 
@@ -352,7 +352,7 @@ data2_2<-data2_2[,-c(133,35,36)]
 col_2<-colnames(data2_2)
 ```
 
-#### Then deal with missing values in PRO-ACT training data (2223 obs. of 99 variables)####
+#### Then deal with missing values in PRO-ACT training data (2223 obs. of 100 variables)####
 ```{r}
 data1<-data1[,order(colnames(data1))]
 col_chose<-is.element(colnames(data1),col_2)
@@ -367,13 +367,13 @@ for(i in 1:ncol(data1_3)){
   }
 }
 data1_3<-data.frame(apply(data1_3,2,f))
-data2_2<-data2_2[,is.element(colnames(data2_2),colnames(data1_3))] 
 
+data2_2<-data2_2[,is.element(colnames(data2_2),colnames(data1_3))] 
 data2_2<-data2_2[,order(colnames(data2_2))]
 data1_3<-data1_3[,order(colnames(data1_3))]
 #Delete SubjectID and Race
-write.csv(data2_2[,-c(94,85)],"Data/complete_testing.csv", row.names = FALSE)
-write.csv(data1_3[,-c(94,85)],"Data/complete_training.csv", row.names = FALSE)
+write.csv(data2_2[,-85],"Data/complete_testing.csv", row.names = FALSE)
+write.csv(data1_3[,-85],"Data/complete_training.csv", row.names = FALSE)
 ```
 
 
@@ -405,7 +405,7 @@ levels(df_train$onset_site_mean)[4] <- "4"
 df_train$Gender_mean <- as.factor(df_train$Gender_mean)
 df_test$Gender_mean <- as.factor(df_test$Gender_mean)
 
-rf.fit <-  train(ALSFRS_slope~., data = df_train, method = "rf", trControl = 
+rf.fit <-  train(ALSFRS_slope~., data = df_train[,-93], method = "rf", trControl = 
                    trainControl(method = "cv", number = 5), allowParallel=TRUE)
 
 rf.result <- data.frame(df_test$ALSFRS_slope)
@@ -421,11 +421,11 @@ write.csv(rf.result,"RF_predict.csv",row.names = FALSE)
 # set_bart_machine_memory(10000)
 set.seed(614)
 data1<-read.csv('Data/complete_training.csv',header=TRUE)
-train.x<-data1[,-6]
-train.y<-data1[,6]
+train.x<-data1[,-c(6,93)]
+train.y<-data1[,-c(6,93)]
 data2<-read.csv('Data/complete_testing.csv',header=TRUE)
-test.x<-data2[,-6]
-test.y<-data2[,6]
+test.x<-data2[,-c(6,93)]
+test.y<-data2[,-c(6,93)]
 options(java.parameters="-Xmx68000m")
 set_bart_machine_num_cores(8)
 bart_machine_cv <- bartMachineCV(train.x, train.y, mem_cache_for_speed = FALSE)##CV
@@ -438,11 +438,11 @@ write.csv(y_p,"bart_predict.csv")
 ```{r, warning=FALSE, message=FALSE, results=FALSE}
 set.seed(23432)
 data1<-read.csv("Data/complete_training.csv", header =TRUE)
-train.x<-data1[,-6]
-train.y<-data1[,6]
+train.x<-data1[,-c(6,93)]
+train.y<-data1[,-c(6,93)]
 data2<-read.csv("Data/complete_testing.csv",header=TRUE)
-test.x<-data2[,-6]
-test.y<-data2[,6]
+test.x<-data2[,-c(6,93)]
+test.y<-data2[,-c(6,93)]
 test.x<-test.x[,order(colnames(test.x))]
 train.x<-train.x[,order(colnames(train.x))]
 
@@ -517,4 +517,245 @@ p <- ggplot(l, aes(x=Technique, y=value, fill=Technique)) + geom_boxplot()+xlab(
     ylab("Error(Y_hat-Y)")+ggtitle("Difference between Y and its prediction")
 print(p)
 
+```
+
+
+###Extract useful information from adverse events ###
+####Adverse Events in raw training dataset####
+```{r, warning=FALSE, message=FALSE, results=FALSE}
+##train_AE.csv obtained by excel
+df1<-read.csv("train_AE.csv", header=TRUE, fill = TRUE,  stringsAsFactors = FALSE)
+ID<-grep("Gastrointestinal",df1$feature_name)
+
+df1$resp<-0
+
+ID1<-intersect(grep("failure",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID2<-intersect(grep("Choking",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID3<-intersect(grep("insufficiency",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID4<-intersect(grep("Orthopnea",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID5<-intersect(grep("distress",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID6<-intersect(grep("Hoarse voice",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+
+df1$resp[ID1]<-1
+df1$resp[ID2]<-df1$resp[ID2]+1
+df1$resp[ID3]<-df1$resp[ID3]+1
+df1$resp[ID4]<-df1$resp[ID4]+1
+df1$resp[ID5]<-df1$resp[ID5]+1
+df1$resp[ID6]<-df1$resp[ID6]+1
+
+df1$infection<-0
+ID1<-intersect(grep("upper respiratory",df1$feature_value,ignore.case = TRUE),grep("infection",df1$feature_name,ignore.case = TRUE)) 
+df1$infection[ID1]<-1
+
+df1$muscle<-0
+ID1<-intersect(grep("weakness",df1$feature_value,ignore.case = TRUE),grep("muscle",df1$feature_name,ignore.case = TRUE)) 
+df1$muscle[ID1]<-1
+
+df1$other<-0
+ID1<-grep("weight decrease",df1$feature_value,ignore.case = TRUE) 
+df1$other[ID1]<-1
+
+df1$injuries<-0
+ID1<-intersect(grep("fall",df1$feature_value,ignore.case = TRUE),grep("injuries",df1$feature_name,ignore.case = TRUE)) 
+df1$injuries[ID1]<-1
+
+df1$move<-0
+ID1<-intersect(grep("tremor",df1$feature_value,ignore.case = TRUE),grep("movement",df1$feature_name,ignore.case = TRUE)) 
+df1$move[ID1]<-1
+
+df1$musculoskeletal<-0
+ID1<-intersect(grep("chewing",df1$feature_value,ignore.case = TRUE),grep("musculoskeletal",df1$feature_name,ignore.case = TRUE)) 
+df1$musculoskeletal[ID1]<-1
+
+df1$neurological<-0
+ID1<-intersect(grep("speech",df1$feature_value,ignore.case = TRUE),grep("neurological",df1$feature_name,ignore.case = TRUE)) 
+df1$neurological[ID1]<-1
+
+df1$neuromuscular<-0
+ID1<-intersect(grep("spasticity",df1$feature_value,ignore.case = TRUE),grep("neuromuscular",df1$feature_name,ignore.case = TRUE)) 
+df1$neuromuscular[ID1]<-1
+
+df1$cranial_nerve<-0
+ID1<-intersect(grep("paralysis",df1$feature_value,ignore.case = TRUE),grep("cranial nerve",df1$feature_name,ignore.case = TRUE)) 
+df1$cranial_nerve[ID1]<-1
+
+df1$neurological<-0
+ID1<-intersect(grep("dysarthria",df1$feature_value,ignore.case = TRUE),grep("neurological",df1$feature_name,ignore.case = TRUE)) 
+df1$neurological[ID1]<-1
+
+
+df1$peripheral_neuropath<-0
+ID1<-intersect(grep("foot drop",df1$feature_value,ignore.case = TRUE),grep("peripheral neuropath",df1$feature_name,ignore.case = TRUE)) 
+df1$peripheral_neuropath[ID1]<-1
+
+df1<-as.data.frame(df1)
+
+df_disease1<-df1[,c(2,6:16)]
+aaa1<-rowsum(df_disease1,df_disease1$SubjectID)
+aaa1$SubjectID<-as.numeric(rownames(aaa1))
+write.csv(aaa1,"AE_mapping_train_wizID.csv", row.names = FALSE)
+```
+####Adverse Events in raw testing dataset####
+```{r, warning=FALSE, message=FALSE, results=FALSE}
+##test_AE.csv obtained by excel
+df1<-read.csv("test_AE.csv", header=TRUE, fill = TRUE,  stringsAsFactors = FALSE)
+ID<-grep("Gastrointestinal",df1$feature_name)
+
+df1$resp<-0
+
+ID1<-intersect(grep("failure",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID2<-intersect(grep("Choking",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID3<-intersect(grep("insufficiency",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID4<-intersect(grep("Orthopnea",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID5<-intersect(grep("distress",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+ID6<-intersect(grep("Hoarse voice",df1$feature_value),grep("Respiratory",df1$feature_name)) 
+
+df1$resp[ID1]<-1
+df1$resp[ID2]<-df1$resp[ID2]+1
+df1$resp[ID3]<-df1$resp[ID3]+1
+df1$resp[ID4]<-df1$resp[ID4]+1
+df1$resp[ID5]<-df1$resp[ID5]+1
+df1$resp[ID6]<-df1$resp[ID6]+1
+
+df1$infection<-0
+ID1<-intersect(grep("upper respiratory",df1$feature_value,ignore.case = TRUE),grep("infection",df1$feature_name,ignore.case = TRUE)) 
+df1$infection[ID1]<-1
+
+df1$muscle<-0
+ID1<-intersect(grep("weakness",df1$feature_value,ignore.case = TRUE),grep("muscle",df1$feature_name,ignore.case = TRUE)) 
+df1$muscle[ID1]<-1
+
+df1$other<-0
+ID1<-grep("weight decrease",df1$feature_value,ignore.case = TRUE) 
+df1$other[ID1]<-1
+
+df1$injuries<-0
+ID1<-intersect(grep("fall",df1$feature_value,ignore.case = TRUE),grep("injuries",df1$feature_name,ignore.case = TRUE)) 
+df1$injuries[ID1]<-1
+
+df1$move<-0
+ID1<-intersect(grep("tremor",df1$feature_value,ignore.case = TRUE),grep("movement",df1$feature_name,ignore.case = TRUE)) 
+df1$move[ID1]<-1
+
+df1$musculoskeletal<-0
+ID1<-intersect(grep("chewing",df1$feature_value,ignore.case = TRUE),grep("musculoskeletal",df1$feature_name,ignore.case = TRUE)) 
+df1$musculoskeletal[ID1]<-1
+
+df1$neurological<-0
+ID1<-intersect(grep("speech",df1$feature_value,ignore.case = TRUE),grep("neurological",df1$feature_name,ignore.case = TRUE)) 
+df1$neurological[ID1]<-1
+
+df1$neuromuscular<-0
+ID1<-intersect(grep("spasticity",df1$feature_value,ignore.case = TRUE),grep("neuromuscular",df1$feature_name,ignore.case = TRUE)) 
+df1$neuromuscular[ID1]<-1
+
+df1$cranial_nerve<-0
+ID1<-intersect(grep("paralysis",df1$feature_value,ignore.case = TRUE),grep("cranial nerve",df1$feature_name,ignore.case = TRUE)) 
+df1$cranial_nerve[ID1]<-1
+
+df1$neurological<-0
+ID1<-intersect(grep("dysarthria",df1$feature_value,ignore.case = TRUE),grep("neurological",df1$feature_name,ignore.case = TRUE)) 
+df1$neurological[ID1]<-1
+
+df1$peripheral_neuropath<-0
+ID1<-intersect(grep("foot drop",df1$feature_value,ignore.case = TRUE),grep("peripheral neuropath",df1$feature_name,ignore.case = TRUE)) 
+df1$peripheral_neuropath[ID1]<-1
+
+df1<-as.data.frame(df1)
+
+df_disease2<-df1[,c(2,8:18)]
+aaa2<-rowsum(df_disease2,df_disease2$SubjectID)
+aaa2$SubjectID<-as.numeric(rownames(aaa2))
+write.csv(aaa2,"AE_mapping_test_wizID.csv", row.names = FALSE)
+```
+
+####aggregate adverse events information####
+```{r, warning=FALSE, message=FALSE, results=FALSE}
+training<-read.csv("Data/complete_training.csv",header=TRUE)
+testing<-read.csv("Data/complete_testing.csv",header=TRUE)
+
+training_ae<-read.csv("AE_mapping_train_wizID.csv",header=TRUE)
+testing_ae<-read.csv("AE_mapping_test_wizID.csv",header=TRUE)
+
+train<-merge(training,training_ae,by="SubjectID")
+test<-merge(testing,testing_ae,by="SubjectID")
+
+score_ae<-apply(train[,101:111],1,sum)
+train$score_ae<-score_ae
+
+score_ae<-apply(test[,101:111],1,sum)
+test$score_ae<-score_ae
+
+write.csv(train,"training_wizAE.csv", row.names = FALSE)
+write.csv(test,"testing_wizAE.csv", row.names = FALSE)
+```
+
+###Investigation on variable importance(with/without adverse events)###
+####RandomForests####
+```{r, warning=FALSE, message=FALSE, results=FALSE}
+#load datasets
+df_train <- read.csv("training_wizAE.csv")
+df_test <- read.csv("testing_wizAE.csv")
+#remove unnecessary columns
+df_train <- df_train[,-c(1,3)]
+df_test <- df_test[,-c(1,3)]
+#data type transformationï¼onset_site_meanï¼Gender_meanï¼
+df_train$onset_site_mean <- as.factor(df_train$onset_site_mean)
+df_test$onset_site_mean <- as.factor(df_test$onset_site_mean)
+levels(df_train$onset_site_mean)[4] <- "4"
+
+df_train$Gender_mean <- as.factor(df_train$Gender_mean)
+df_test$Gender_mean <- as.factor(df_test$Gender_mean)
+################RandomForests#######################
+set.seed(49239)
+#without AE
+rf.fit1 <-  train(ALSFRS_slope~., data = df_train[,-c(1,100:111)], method = "rf", trControl = 
+                     trainControl(method = "cv", number = 5), allowParallel=TRUE, importance = TRUE)
+#with AE
+rf.fit2 <-  train(ALSFRS_slope~., data = df_train[,-1], method = "rf", trControl = 
+                      trainControl(method = "cv", number = 5), allowParallel=TRUE, importance = TRUE)
+
+#obtain importance measures of features in the fitted models
+rf_noAE.ImpMeasure <- data.frame(varImp(rf.fit1)$importance)
+rf_noAE.ImpMeasure$Vars <- row.names(rf_noAE.ImpMeasure)
+rf_noAE.ImpMeasure <- rf_noAE.ImpMeasure[order(-rf_noAE.ImpMeasure$Overall),]
+
+rf_AE.ImpMeasure <- data.frame(varImp(rf.fit2)$importance)
+rf_AE.ImpMeasure$Vars <- row.names(rf_AE.ImpMeasure)
+rf_AE.ImpMeasure <- rf_AE.ImpMeasure[order(-rf_AE.ImpMeasure$Overall),]
+
+#output
+write.csv(rf_noAE.ImpMeasure, "RF_ImpMeasure_withoutAE.csv", row.names = FALSE)
+write.csv(rf_AE.ImpMeasure, "RF_ImpMeasure_withAE.csv", row.names = FALSE)
+```
+
+####BART####
+```{r, warning=FALSE, message=FALSE, results=FALSE}
+options(java.parameters="-Xmx68000m")
+library(bartMachine)
+set.seed(614)
+#without AE
+data1<-read.csv('training_wizAE.csv',header=TRUE)
+train.x<-data1[,-c(1,7,101:112)]
+train.y<-data1[,7]
+data2<-read.csv('testing_wizAE.csv',header=TRUE)
+test.x<-data2[,-c(1,7,101:112)]
+test.y<-data2[,7]
+set_bart_machine_num_cores(8)
+bart_machine_cv <- bartMachineCV(train.x, train.y, mem_cache_for_speed = FALSE)##CV
+aaa1<-investigate_var_importance(bart_machine_cv,type="splits", plot=FALSE, num_replicates_for_avg=5,num_trees_bottleneck=20)
+score1<-aaa1$avg_var_props
+write.csv(score1,"BART_ImpMeasure_withoutAE.csv")
+#with AE
+data1<-read.csv('training_wizAE.csv',header=TRUE)
+train.x<-data1[,-c(1,7)]
+train.y<-data1[,7]
+data2<-read.csv('testing_wizAE.csv',header=TRUE)
+test.x<-data2[,-c(1,7)]
+test.y<-data2[,7]
+set_bart_machine_num_cores(8)
+bart_machine_cv <- bartMachineCV(train.x, train.y, mem_cache_for_speed = FALSE)##CV
+aaa2<-investigate_var_importance(bart_machine_cv,type="splits", plot=FALSE, num_replicates_for_avg=5,num_trees_bottleneck=20)
+score2<-aaa2$avg_var_props
+write.csv(score2,"BART_ImpMeasure_withAE.csv")
 ```
