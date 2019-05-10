@@ -1,5 +1,8 @@
 # ALS_PA
-Amyotrophic Lateral Sclerosis Predictive Analytics (**ALS_PA**)
+
+<a href="https://link.springer.com/article/10.1007%2Fs12021-018-9406-9"><img align="right" width="400" height="200" src="https://raw.githubusercontent.com/SOCR/ALS_PA/master/ALS_PA_workflow.png"></a>
+
+**Amyotrophic Lateral Sclerosis Predictive Analytics (ALS_PA)**
 
 This [SOCR](http://socr.umich.edu/) project uses model-based (e.g., linear models) and model-free (e.g., machine-learning) methods to predict the change of the Amyotrophic Lateral Sclerosis Functional Rating Scale (ALSFRS) scores over time. Using independent training data (for model estimation and machine learning) and independent testing data (for assessing the accuracy and reliability of the predictions) we quantify the algorithmic performance and compare the results of different forecasting techniques. By training models of the change of the ALSFRS slope from baseline to 3 (learning/training) and subsequently testing the forecasts on the ALSFRS change between 3 and 12 months allows us to quantify the performance of the predictors to accurately diagnose the disease severity and progression over time. 
 
